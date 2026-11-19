@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solar System — Orbital Order &amp; Period (T) Simulator</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Crect width='28' height='28' rx='7' fill='%23050811'/%3E%3Cellipse cx='14' cy='14' rx='11' ry='6' fill='none' stroke='%2338BDF8' stroke-width='1.5' transform='rotate(-22 14 14)'/%3E%3Ccircle cx='14' cy='14' r='4.4' fill='%23FDB813'/%3E%3Ccircle cx='22.5' cy='10.5' r='2.2' fill='%2338BDF8'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Full-viewport interactive orbital simulation canvas -->
+  <canvas id="solar-canvas" aria-label="Interactive Solar System Orbital Simulation"></canvas>
+
+  <!-- Floating Space Observatory HUD -->
+  <div id="hud-root" class="hud-root">
+    <!-- Top Header & Time Simulation Bar -->
+    <header class="glass-panel top-bar" aria-label="Simulation Clock and Playback Controls">
+      <div class="brand-cluster">
+        <div class="brand-emblem" aria-hidden="true">
+          <svg viewBox="0 0 28 28" width="24" height="24" fill="none">
+            <circle cx="14" cy="14" r="4.2" fill="#FDB813" />
+            <ellipse cx="14" cy="14" rx="11.5" ry="6.2" stroke="rgba(56,189,248,0.75)" stroke-width="1.25" transform="rotate(-22 14 14)" />
+            <circle cx="22.8" cy="10.4" r="2.1" fill="#38BDF8" />
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1 class="brand-title">Solar System</h1>
+          <p class="brand-subtitle">Orbital Order (#1&ndash;#8) &amp; Period (T) Simulator</p>
+        </div>
+      </div>
+
+      <div class="clock-cluster" role="status" aria-live="off" aria-label="Elapsed Simulation Time">
+        <div class="clock-metric">
+          <span class="clock-label">Elapsed Earth Days</span>
+          <span id="clock-days" class="clock-value mono">0.00 d</span>
+        </div>
+        <div class="clock-divider" aria-hidden="true"></div>
+        <div class="clock-metric">
+          <span class="clock-label">Earth Years</span>
+          <span id="clock-years" class="clock-value clock-value-accent mono">0.000 yr</span>
+        </div>
+        <div class="clock-divider" aria-hidden="true"></div>
+        <div class="clock-metric clock-metric-rate">
+          <span class="clock-label">Sim Rate</span>
+          <span id="clock-rate" class="clock-rate mono">+30.0 d/s</span>
+        </div>
+      </div>
+
+      <div class="transport-cluster">
+        <button id="btn-play-pause" class="btn btn-primary" type="button" title="Play / Pause (Space)" aria-label="Play or Pause simulation">
+          <svg id="icon-play" class="btn-icon hidden" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <path d="M4 2.8a.7.7 0 0 1 1.06-.6l8.2 5.2a.7.7 0 0 1 0 1.2l-8.2 5.2A.7.7 0 0 1 4 13.2V2.8Z" />
+          </svg>
+          <svg id="icon-pause" class="btn-icon" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <rect x="3.2" y="2.5" width="3.4" height="11" rx="1" />
+            <rect x="9.4" y="2.5" width="3.4" height="11" rx="1" />
+          </svg>
+          <span id="label-play-pause">Pause</span>
+        </button>
+
+        <button id="btn-reverse" class="btn btn-icon-text" type="button" aria-pressed="false" title="Toggle Forward / Reverse Time Direction">
+          <svg class="btn-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12.5 5.5H4.2M4.2 5.5l2.8-2.8M4.2 5.5l2.8 2.8" />
+            <path d="M3.5 10.5h8.3M11.8 10.5L9 7.7M11.8 10.5L9 13.3" />
+          </svg>
+          <span id="label-direction">Fwd</span>
+        </button>
+
+        <div class="step-group" role="group" aria-label="Step Simulation Time">
+          <button id="btn-step-1d" class="btn btn-step mono" type="button" data-step-days="1" title="Step forward 1 Earth day">+1 d</button>
+          <button id="btn-step-30d" class="btn btn-step mono" type="button" data-step-days="30" title="Step forward 30 Earth days">+30 d</button>
+          <button id="btn-step-1yr" class="btn btn-step btn-step-highlight mono" type="button" data-step-days="365.256" title="Step forward exactly 365.256 days (1 Earth sidereal year)">+1 Earth Yr</button>
+        </div>
+
+        <button id="btn-reset-time" class="btn btn-ghost" type="button" title="Reset elapsed time to t = 0 (R)">
+          <svg class="btn-icon" viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M2.8 8a5.2 5.2 0 1 0 1.4-3.5L2.5 6.2" />
+            <path d="M2.5 2.7v3.5H6" />
+          </svg>
+          <span>Reset</span>
+        </button>
+
+        <button id="btn-toggle-panel" class="btn btn-ghost btn-panel-toggle" type="button" aria-expanded="true" aria-controls="telemetry-panel" title="Collapse or expand telemetry panel">
+          <svg id="icon-panel-toggle" class="btn-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="2.5" width="12" height="11" rx="1.8" />
+            <path d="M9.8 2.5v11" />
+          </svg>
+          <span class="toggle-text">Panel</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Selected Planet / Sun Inspector Card (top-left, shown when a body is selected) -->
+    <aside id="inspector-card" class="glass-panel inspector-card hidden" aria-label="Selected Body Telemetry">
+      <div class="inspector-header">
+        <div class="inspector-title-wrap">
+          <div class="inspector-badges">
+            <span id="inspector-order-badge" class="order-pill mono">#3 from Sun</span>
+            <span id="inspector-category-badge" class="category-pill">Terrestrial</span>
+          </div>
+          <div class="inspector-name-row">
+            <span id="inspector-dot" class="planet-dot-lg" aria-hidden="true"></span>
+            <h2 id="inspector-name" class="inspector-name">Earth</h2>
+          </div>
+        </div>
+        <button id="btn-close-inspector" class="btn-close" type="button" aria-label="Close inspector" title="Close (Esc)">&times;</button>
+      </div>
+
+      <p id="inspector-description" class="inspector-desc"></p>
+
+      <div id="inspector-metrics" class="inspector-grid"></div>
+
+      <div id="inspector-kepler-strip" class="inspector-kepler-strip mono"></div>
+
+      <div class="inspector-actions">
+        <button id="btn-follow-planet" class="btn btn-primary btn-sm" type="button">Follow Planet</button>
+        <button id="btn-center-sun" class="btn btn-ghost btn-sm" type="button" title="Center camera on Sun (0)">Center on Sun</button>
+      </div>
+    </aside>
+
+    <!-- Right Collapsible Telemetry & Kepler's 3rd Law Panel -->
+    <aside id="telemetry-panel" class="glass-panel telemetry-panel" aria-label="Planetary Order and Period Telemetry">
+      <div class="panel-header">
+        <div class="panel-heading">
+          <h2 class="panel-title">#1 &rarr; #8 Order from the Sun &amp; Live Period (T)</h2>
+          <p class="panel-caption">Click any planet to inspect &amp; track its orbit</p>
+        </div>
+
+        <div class="tab-bar" role="tablist" aria-label="Telemetry Views">
+          <button id="tab-planets" class="tab-btn active" type="button" role="tab" aria-selected="true" aria-controls="panel-view-planets">
+            Order &amp; Period (T)
+          </button>
+          <button id="tab-kepler" class="tab-btn" type="button" role="tab" aria-selected="false" aria-controls="panel-view-kepler">
+            Kepler&rsquo;s 3rd Law (T&sup2; = a&sup3;)
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Ordered 1..8 Planetary Telemetry List -->
+      <div id="panel-view-planets" class="panel-body" role="tabpanel" aria-labelledby="tab-planets">
+        <ol id="planet-list" class="planet-list" aria-label="Eight planets ordered from the Sun"></ol>
+
+        <button id="btn-open-kepler-footer" class="kepler-teaser" type="button">
+          <span class="kepler-teaser-eq mono">T&sup2; / a&sup3; &approx; 1.000</span>
+          <span class="kepler-teaser-cta">Inspect Kepler&rsquo;s 3rd Law Plot &rarr;</span>
+        </button>
+      </div>
+
+      <!-- Tab 2: Kepler's 3rd Law Log-Log Plot & Verification Readout -->
+      <div id="panel-view-kepler" class="panel-body hidden" role="tabpanel" aria-labelledby="tab-kepler">
+        <div class="kepler-intro">
+          <div class="kepler-formula mono">T&sup2; = a&sup3; &nbsp;&hArr;&nbsp; log(T) = 1.5 &middot; log(a)</div>
+          <p class="kepler-note">
+            With semi-major axis <strong>a</strong> in AU and sidereal orbital period <strong>T</strong> in Earth years,
+            all eight planets lie directly along the theoretical slope-3/2 power law.
+          </p>
+        </div>
+
+        <div id="kepler-chart-container" class="kepler-chart-box" aria-label="Kepler's Third Law log-log scatter plot"></div>
+
+        <div class="kepler-table-wrap">
+          <table class="kepler-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Planet</th>
+                <th class="num">a (AU)</th>
+                <th class="num">T (yr)</th>
+                <th class="num">T&sup2; / a&sup3;</th>
+              </tr>
+            </thead>
+            <tbody id="kepler-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Subtle Keyboard Shortcut Hint Footer -->
+      <div class="shortcut-hint" aria-hidden="true">
+        <span><kbd>Space</kbd> Play</span>
+        <span><kbd>1</kbd>&ndash;<kbd>8</kbd> Planet</span>
+        <span><kbd>0</kbd> Sun</span>
+        <span><kbd>V</kbd> View</span>
+        <span><kbd>R</kbd> Reset</span>
+      </div>
+    </aside>
+
+    <!-- Bottom Compact Control Dock (Speed, Scale, Alignment, Camera, Overlays) -->
+    <section id="bottom-dock" class="glass-panel bottom-dock" aria-label="Simulation Speed and View Controls">
+      <!-- Row 1: Speed Slider + Presets -->
+      <div class="dock-row dock-row-speed">
+        <div class="speed-slider-group">
+          <label for="speed-slider" class="dock-label">Speed</label>
+          <input id="speed-slider" class="speed-slider" type="range" min="0" max="1000" step="1" value="440" aria-label="Simulation speed logarithmic slider" />
+          <span id="speed-readout" class="speed-readout mono">30.0 d/s</span>
+        </div>
+
+        <div id="speed-presets" class="preset-group" role="group" aria-label="Simulation Speed Presets">
+          <button class="chip mono" type="button" data-speed="1">1 d/s</button>
+          <button class="chip mono" type="button" data-speed="10">10 d/s</button>
+          <button class="chip mono active" type="button" data-speed="30">30 d/s</button>
+          <button class="chip mono" type="button" data-speed="100">100 d/s</button>
+          <button class="chip mono" type="button" data-speed="365.256" title="365.256 Earth days per second">1 yr/s</button>
+          <button class="chip mono" type="button" data-speed="1826.28" title="5 Earth years per second">5 yr/s</button>
+          <button class="chip mono" type="button" data-speed="9131.4" title="25 Earth years per second">25 yr/s</button>
+        </div>
+      </div>
+
+      <!-- Row 2: Scale, Alignment, View Presets, Visual Overlays -->
+      <div class="dock-row dock-row-view">
+        <div class="control-group" role="group" aria-label="Distance Scale Mode">
+          <span class="dock-label">Scale</span>
+          <div class="segmented">
+            <button id="btn-scale-compressed" class="seg-btn active" type="button" data-scale="compressed" aria-pressed="true" title="Compressed orbital spacing so all 8 planets are clearly visible">Visual Order</button>
+            <button id="btn-scale-true" class="seg-btn" type="button" data-scale="true" aria-pressed="false" title="True proportional AU orbital radii (scroll to zoom inner/outer)">True AU</button>
+          </div>
+        </div>
+
+        <div class="control-group" role="group" aria-label="Starting Alignment">
+          <span class="dock-label">Start</span>
+          <div class="segmented">
+            <button id="btn-start-aligned" class="seg-btn active" type="button" data-start="aligned" aria-pressed="true" title="All 8 planets begin aligned along the +X 0° reference line to compare periods T">Aligned 0&deg;</button>
+            <button id="btn-start-j2000" class="seg-btn" type="button" data-start="j2000" aria-pressed="false" title="Real astronomical J2000.0 epoch longitudes">J2000</button>
+          </div>
+        </div>
+
+        <div class="control-group" role="group" aria-label="Camera View Mode">
+          <span class="dock-label">View</span>
+          <div class="segmented">
+            <button id="btn-view-3d" class="seg-btn active" type="button" data-view="3d" aria-pressed="true" title="3D oblique perspective showing orbital inclinations (V)">3D Tilt</button>
+            <button id="btn-view-top" class="seg-btn" type="button" data-view="top" aria-pressed="false" title="Top-down 2D ecliptic map (V)">Top-Down</button>
+          </div>
+          <button id="btn-reset-view" class="btn btn-xs btn-ghost" type="button" title="Reset camera angle, zoom, and center on Sun">Reset View</button>
+        </div>
+
+        <div class="control-group control-group-overlays" role="group" aria-label="Visual Overlays">
+          <span class="dock-label">Overlays</span>
+          <div class="overlay-chips">
+            <button class="toggle-chip active" type="button" data-overlay="showOrbits" aria-pressed="true">Orbits</button>
+            <button class="toggle-chip active" type="button" data-overlay="showLabels" aria-pressed="true">Labels</button>
+            <button class="toggle-chip active" type="button" data-overlay="showTrails" aria-pressed="true">Trails</button>
+            <button class="toggle-chip active" type="button" data-overlay="showStartLine" aria-pressed="true">0&deg; Line</button>
+            <button class="toggle-chip active" type="button" data-overlay="showAsteroidBelt" aria-pressed="true">Asteroid Belt</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
